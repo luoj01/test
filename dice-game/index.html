@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎲 摇骰子</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #eee;
+      user-select: none;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 2px;
+    }
+
+    .dice-container {
+      display: flex;
+      gap: 3rem;
+      margin-bottom: 2rem;
+    }
+
+    .dice-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .dice-label {
+      font-size: 0.9rem;
+      color: #888;
+    }
+
+    .dice-value {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #f7971e;
+      min-height: 2rem;
+    }
+
+    /* Dice cup / shaker */
+    .cup {
+      width: 110px;
+      height: 110px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .dice {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      background: linear-gradient(145deg, #ffffff, #e8e8e8);
+      border-radius: 14px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      padding: 10px;
+      box-shadow:
+        0 8px 24px rgba(0,0,0,0.5),
+        inset 0 2px 4px rgba(255,255,255,0.9),
+        inset 0 -2px 4px rgba(0,0,0,0.1);
+      left: 10px;
+      top: 10px;
+    }
+
+    .dice.rolling {
+      animation: roll 0.8s ease-in-out;
+    }
+
+    @keyframes roll {
+      0%   { transform: rotateX(0deg) rotateY(0deg) scale(1); }
+      20%  { transform: rotateX(120deg) rotateY(80deg) scale(1.05); }
+      40%  { transform: rotateX(200deg) rotateY(160deg) scale(0.95); }
+      60%  { transform: rotateX(280deg) rotateY(240deg) scale(1.05); }
+      80%  { transform: rotateX(340deg) rotateY(300deg) scale(0.98); }
+      100% { transform: rotateX(360deg) rotateY(360deg) scale(1); }
+    }
+
+    .dot {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dot-inner {
+      width: 18px;
+      height: 18px;
+      background: radial-gradient(circle at 35% 35%, #3a3a3a, #111);
+      border-radius: 50%;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 1px 2px rgba(255,255,255,0.3);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .dot.on .dot-inner { opacity: 1; }
+
+    /* Standard 3x3 dice dot positions (0-8):
+       0 1 2
+       3 4 5
+       6 7 8
+       1: 4
+       2: 0 8
+       3: 0 4 8
+       4: 0 2 6 8
+       5: 0 2 4 6 8
+       6: 0 2 3 5 6 8
+    */
+    .dot.pos-0.on .dot-inner,
+    .dot.pos-1.on .dot-inner,
+    .dot.pos-2.on .dot-inner,
+    .dot.pos-3.on .dot-inner,
+    .dot.pos-4.on .dot-inner,
+    .dot.pos-5.on .dot-inner,
+    .dot.pos-6.on .dot-inner,
+    .dot.pos-7.on .dot-inner,
+    .dot.pos-8.on .dot-inner { opacity: 1; }
+
+    button {
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      color: #1a1a2e;
+      border: none;
+      padding: 1rem 3rem;
+      font-size: 1.3rem;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(247, 151, 30, 0.4);
+      transition: all 0.2s;
+      letter-spacing: 1px;
+    }
+
+    button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(247, 151, 30, 0.5);
+    }
+
+    button:active { transform: translateY(0); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .result-msg {
+      font-size: 1.4rem;
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+      min-height: 2rem;
+      color: #ccc;
+    }
+
+    .result-msg.win { color: #4ade80; }
+    .result-msg.lose { color: #f87171; }
+    .result-msg.draw { color: #fbbf24; }
+
+    .history-section {
+      margin-top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .history-label {
+      color: #555;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .history-items {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .h-item {
+      background: rgba(255,255,255,0.06);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: #aaa;
+      transition: all 0.2s;
+    }
+
+    .h-item.win { color: #4ade80; background: rgba(74,222,128,0.1); }
+    .h-item.lose { color: #f87171; background: rgba(248,113,113,0.1); }
+    .h-item.draw { color: #fbbf24; background: rgba(251,191,36,0.1); }
+
+    .rules {
+      margin-top: 2.5rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 1rem 1.8rem;
+      max-width: 380px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #666;
+      line-height: 1.8;
+    }
+
+    .rules strong { color: #f7971e; }
+
+    /* dice number -> which dot positions are ON */
+    const DICE_PATTERNS = {
+      1: [4],
+      2: [0, 8],
+      3: [0, 4, 8],
+      4: [0, 2, 6, 8],
+      5: [0, 2, 4, 6, 8],
+      6: [0, 2, 3, 5, 6, 8],
+    };
+  </style>
+</head>
+<body>
+
+  <h1>🎲 摇骰子</h1>
+
+  <div class="result-msg" id="resultMsg"></div>
+
+  <div class="dice-container">
+    <div class="dice-wrapper">
+      <div class="cup">
+        <div class="dice" id="dice1"></div>
+      </div>
+      <div class="dice-label">你</div>
+      <div class="dice-value" id="val1">-</div>
+    </div>
+
+    <div class="dice-wrapper">
+      <div class="cup">
+        <div class="dice" id="dice2"></div>
+      </div>
+      <div class="dice-label">庄家</div>
+      <div class="dice-value" id="val2">-</div>
+    </div>
+  </div>
+
+  <button id="rollBtn" onclick="roll()">摇一摇 🎲</button>
+
+  <div class="history-section" id="historySection" style="display:none">
+    <div class="history-label">最近结果</div>
+    <div class="history-items" id="historyItems"></div>
+  </div>
+
+  <div class="rules">
+    🎯 <strong>规则</strong>：点击按钮同时摇两颗骰子<br>
+    🆚 点数之和大者赢（你 vs 庄家）<br>
+    ⚖️ 点数相同则为平局
+  </div>
+
+<script>
+  const PATTERNS = {
+    1: [4],
+    2: [0, 8],
+    3: [0, 4, 8],
+    4: [0, 2, 6, 8],
+    5: [0, 2, 4, 6, 8],
+    6: [0, 2, 3, 5, 6, 8],
+  };
+
+  function buildDiceEl(el) {
+    el.innerHTML = '';
+    for (let i = 0; i < 9; i++) {
+      const dot = document.createElement('div');
+      dot.className = `dot pos-${i}`;
+      dot.innerHTML = '<div class="dot-inner"></div>';
+      el.appendChild(dot);
+    }
+  }
+
+  function renderDice(el, value) {
+    const active = new Set(PATTERNS[value] || []);
+    el.querySelectorAll('.dot').forEach((dot, i) => {
+      dot.classList.toggle('on', active.has(i));
+    });
+  }
+
+  function rnd(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  let busy = false;
+  const history = [];
+
+  function roll() {
+    if (busy) return;
+    busy = true;
+
+    const btn = document.getElementById('rollBtn');
+    const d1 = document.getElementById('dice1');
+    const d2 = document.getElementById('dice2');
+    const v1 = document.getElementById('val1');
+    const v2 = document.getElementById('val2');
+    const msg = document.getElementById('resultMsg');
+
+    btn.disabled = true;
+    msg.textContent = '';
+    msg.className = 'result-msg';
+    v1.textContent = '?';
+    v2.textContent = '?';
+
+    d1.classList.add('rolling');
+    d2.classList.add('rolling');
+
+    let tick = 0;
+    const iv = setInterval(() => {
+      renderDice(d1, rnd(1, 6));
+      renderDice(d2, rnd(1, 6));
+      tick++;
+    }, 80);
+
+    setTimeout(() => {
+      clearInterval(iv);
+      d1.classList.remove('rolling');
+      d2.classList.remove('rolling');
+
+      const n1 = rnd(1, 6), n2 = rnd(1, 6);
+      renderDice(d1, n1);
+      renderDice(d2, n2);
+      v1.textContent = n1;
+      v2.textContent = n2;
+
+      const diff = n1 - n2;
+      if (diff > 0) {
+        msg.textContent = '🎉 你赢了！';
+        msg.className = 'result-msg win';
+      } else if (diff < 0) {
+        msg.textContent = '😢 庄家赢了';
+        msg.className = 'result-msg lose';
+      } else {
+        msg.textContent = '⚖️ 平局！';
+        msg.className = 'result-msg draw';
+      }
+
+      history.unshift({ n1, n2, diff });
+      if (history.length > 10) history.pop();
+      renderHistory();
+
+      btn.disabled = false;
+      busy = false;
+    }, 1200);
+  }
+
+  function renderHistory() {
+    const section = document.getElementById('historySection');
+    const items = document.getElementById('historyItems');
+    if (history.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = 'flex';
+    items.innerHTML = history.map(h => {
+      const cls = h.diff > 0 ? 'win' : h.diff < 0 ? 'lose' : 'draw';
+      const ico = h.diff > 0 ? '🟢' : h.diff < 0 ? '🔴' : '🟡';
+      return `<span class="h-item ${cls}">${ico} ${h.n1}+${h.n2}=${h.n1+h.n2}</span>`;
+    }).join('');
+  }
+
+  // Build dice DOM
+  buildDiceEl(document.getElementById('dice1'));
+  buildDiceEl(document.getElementById('dice2'));
+</script>
+
+</body>
+</html>
