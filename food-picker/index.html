@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍜 今天吃什么</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      user-select: none;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 2.8rem;
+      margin-bottom: 0.5rem;
+      color: #d63384;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: #6c757d;
+      margin-bottom: 2rem;
+    }
+
+    .food-card {
+      background: white;
+      border-radius: 24px;
+      padding: 3rem 4rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      text-align: center;
+      min-width: 320px;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .food-card.rolling {
+      animation: shake 0.1s infinite;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px) rotate(-1deg); }
+      75% { transform: translateX(5px) rotate(1deg); }
+    }
+
+    .food-emoji {
+      font-size: 6rem;
+      margin-bottom: 1rem;
+      transition: transform 0.3s;
+    }
+
+    .food-emoji.bounce {
+      animation: bounce 0.5s ease;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+
+    .food-name {
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+
+    .food-desc {
+      font-size: 1rem;
+      color: #888;
+    }
+
+    .question-mark {
+      font-size: 5rem;
+      color: #ddd;
+    }
+
+    button {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+      color: white;
+      border: none;
+      padding: 1.2rem 3.5rem;
+      font-size: 1.4rem;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(238, 90, 90, 0.4);
+      transition: all 0.3s ease;
+      margin-top: 2rem;
+      letter-spacing: 2px;
+    }
+
+    button:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 15px 35px rgba(238, 90, 90, 0.5);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .history {
+      margin-top: 2rem;
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 400px;
+    }
+
+    .history-item {
+      background: rgba(255,255,255,0.8);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      color: #666;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .history-label {
+      color: #999;
+      font-size: 0.85rem;
+      margin-top: 1.5rem;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: fall 1s ease-out forwards;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(200px) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🍜 今天吃什么</h1>
+  <p class="subtitle">选择困难症？让我帮你决定！</p>
+
+  <div class="food-card" id="foodCard">
+    <div class="question-mark" id="foodEmoji">❓</div>
+    <div class="food-name" id="foodName">点击按钮开始</div>
+    <div class="food-desc" id="foodDesc">随机为你挑选美食</div>
+  </div>
+
+  <button id="pickBtn" onclick="pick()">🎲 随机选一个</button>
+
+  <div class="history-label" id="historyLabel" style="display:none">最近选择</div>
+  <div class="history" id="history"></div>
+
+<script>
+  const foods = [
+    { name: '火锅', emoji: '🍲', desc: '热气腾腾，暖胃暖心' },
+    { name: '烧烤', emoji: '🍢', desc: '撸串配啤酒，绝配' },
+    { name: '麻辣烫', emoji: '🌶️', desc: '想吃什么夹什么' },
+    { name: '炸鸡', emoji: '🍗', desc: '快乐源泉，酥脆多汁' },
+    { name: '披萨', emoji: '🍕', desc: '芝士拉丝的快乐' },
+    { name: '汉堡', emoji: '🍔', desc: '经典的西式快餐' },
+    { name: '寿司', emoji: '🍣', desc: '精致细腻的日式料理' },
+    { name: '拉面', emoji: '🍜', desc: '浓郁汤底，劲道面条' },
+    { name: '炒饭', emoji: '🍚', desc: '简单却百吃不厌' },
+    { name: '饺子', emoji: '🥟', desc: '皮薄馅大，蘸醋更香' },
+    { name: '小龙虾', emoji: '🦞', desc: '麻辣鲜香，吮指回味' },
+    { name: '麻辣香锅', emoji: '🥘', desc: '想吃什么加什么' },
+    { name: '黄焖鸡', emoji: '🍗', desc: '米饭杀手第一名' },
+    { name: '螺蛳粉', emoji: '🍜', desc: '闻着臭吃着香' },
+    { name: '凉皮', emoji: '🥢', desc: '酸辣爽口，夏日必备' },
+    { name: '肉夹馍', emoji: '🥙', desc: '陕西经典，肉烂馍香' },
+    { name: '煎饼果子', emoji: '🥞', desc: '早餐界的扛把子' },
+    { name: '酸菜鱼', emoji: '🐟', desc: '酸辣开胃，鱼肉嫩滑' },
+    { name: '烤肉', emoji: '🥩', desc: '自己动手丰衣足食' },
+    { name: '串串香', emoji: '🍡', desc: '数签签算钱的乐趣' },
+    { name: '冒菜', emoji: '🥣', desc: '一个人的火锅' },
+    { name: '煲仔饭', emoji: '🍚', desc: '锅巴焦香是灵魂' },
+    { name: '臭豆腐', emoji: '🧈', desc: '外酥里嫩，闻臭吃香' },
+    { name: '牛排', emoji: '🥩', desc: '精致的西餐体验' },
+    { name: '沙拉', emoji: '🥗', desc: '健康轻食，清爽低卡' },
+    { name: '粥', emoji: '🥣', desc: '养胃清淡，暖心暖身' },
+    { name: '蛋炒饭', emoji: '🍳', desc: '简单却考验功夫' },
+    { name: '泡面', emoji: '🍜', desc: '深夜食堂的灵魂' },
+    { name: '水煮鱼', emoji: '🐟', desc: '麻辣鲜香，鱼肉嫩滑' },
+    { name: '糖醋排骨', emoji: '🍖', desc: '酸甜可口，老少皆宜' },
+  ];
+
+  const history = [];
+  let busy = false;
+
+  function pick() {
+    if (busy) return;
+    busy = true;
+
+    const btn = document.getElementById('pickBtn');
+    const card = document.getElementById('foodCard');
+    const emoji = document.getElementById('foodEmoji');
+    const name = document.getElementById('foodName');
+    const desc = document.getElementById('foodDesc');
+
+    btn.disabled = true;
+    card.classList.add('rolling');
+
+    // 快速滚动效果
+    let count = 0;
+    const interval = setInterval(() => {
+      const randomFood = foods[Math.floor(Math.random() * foods.length)];
+      emoji.textContent = randomFood.emoji;
+      name.textContent = randomFood.name;
+      desc.textContent = randomFood.desc;
+      count++;
+    }, 80);
+
+    // 1.5秒后停止
+    setTimeout(() => {
+      clearInterval(interval);
+      card.classList.remove('rolling');
+
+      const finalFood = foods[Math.floor(Math.random() * foods.length)];
+      emoji.textContent = finalFood.emoji;
+      name.textContent = finalFood.name;
+      desc.textContent = finalFood.desc;
+
+      // 弹跳动画
+      emoji.classList.add('bounce');
+      setTimeout(() => emoji.classList.remove('bounce'), 500);
+
+      // 撒花效果
+      createConfetti();
+
+      // 添加历史记录
+      history.unshift(finalFood);
+      if (history.length > 5) history.pop();
+      renderHistory();
+
+      btn.disabled = false;
+      busy = false;
+    }, 1500);
+  }
+
+  function createConfetti() {
+    const card = document.getElementById('foodCard');
+    const colors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff9ff3'];
+
+    for (let i = 0; i < 20; i++) {
+      const confetti = document.createElement('div');
+      confetti.className = 'confetti';
+      confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+      confetti.style.left = Math.random() * 100 + '%';
+      confetti.style.top = '0';
+      confetti.style.animationDelay = Math.random() * 0.5 + 's';
+      card.appendChild(confetti);
+
+      setTimeout(() => confetti.remove(), 1500);
+    }
+  }
+
+  function renderHistory() {
+    const label = document.getElementById('historyLabel');
+    const container = document.getElementById('history');
+
+    if (history.length === 0) {
+      label.style.display = 'none';
+      return;
+    }
+
+    label.style.display = 'block';
+    container.innerHTML = history.map(f =>
+      `<span class="history-item">${f.emoji} ${f.name}</span>`
+    ).join('');
+  }
+</script>
+
+</body>
+</html>
